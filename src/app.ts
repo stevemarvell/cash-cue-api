@@ -12,10 +12,12 @@ import { getDb } from './db/client.js';
 import { RedisCacheService, MemoryCacheService, type CacheService } from './cache/cache.js';
 import { getRedis } from './cache/client.js';
 import type { Db } from './db/client.js';
+import type { ServiceOverrides } from './routes/invoices.js';
 
 export interface AppOptions {
   db?: Db;
   cache?: CacheService;
+  services?: ServiceOverrides;
   logger?: boolean | object;
   trustProxy?: boolean;
 }
@@ -61,9 +63,9 @@ export async function buildApp(opts: AppOptions = {}) {
   await app.register(buildAuthRoutes(db));
   await app.register(buildUsersRoutes(db, cache));
   await app.register(buildClientsRoutes(db));
-  await app.register(buildInvoicesRoutes(db, cache));
-  await app.register(buildAiRoutes(db, cache));
-  await app.register(buildPaymentsRoutes(db));
+  await app.register(buildInvoicesRoutes(db, cache, opts.services));
+  await app.register(buildAiRoutes(db, cache, opts.services));
+  await app.register(buildPaymentsRoutes(db, opts.services));
 
   // Global error handler
   app.setErrorHandler((error: Error, _request, reply) => {

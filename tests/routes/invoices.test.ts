@@ -12,6 +12,7 @@ vi.mock('../../src/services/ai.js', () => ({
   generateChaser: vi.fn().mockResolvedValue({
     invoiceId: 'inv_1', tone: 'friendly', subject: 'Hi', body: 'Pay please.', citesStatutoryInterest: false,
   }),
+  summariseCashFlow: vi.fn().mockResolvedValue('Cash flow summary.'),
 }));
 
 vi.mock('../../src/services/email.js', () => ({

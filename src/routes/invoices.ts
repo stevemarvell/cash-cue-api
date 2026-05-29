@@ -5,9 +5,19 @@ import type { Db } from '../db/client.js';
 import { invoices, users, clients, chaserMessages } from '../db/schema.js';
 import type { Invoice, ChaserTone } from '../types/api.js';
 import { deriveStatus } from '../domain/invoice.js';
-import { generateChaser } from '../services/ai.js';
-import { sendChaser } from '../services/email.js';
+import { generateChaser as defaultGenerateChaser } from '../services/ai.js';
+import { sendChaser as defaultSendChaser } from '../services/email.js';
 import type { CacheService } from '../cache/cache.js';
+
+export interface ServiceOverrides {
+  generateChaser?: typeof defaultGenerateChaser;
+  summariseCashFlow?: (...args: unknown[]) => Promise<string>;
+  sendChaser?: typeof defaultSendChaser;
+  subscribe?: (...args: unknown[]) => Promise<unknown>;
+  cancel?: (...args: unknown[]) => Promise<unknown>;
+  createPaymentLink?: (...args: unknown[]) => Promise<unknown>;
+  constructWebhookEvent?: (...args: unknown[]) => unknown;
+}
 
 const TIER_LIMITS: Record<string, number | null> = {
   starter: 15,
@@ -57,7 +67,9 @@ function rowToInvoice(row: typeof invoices.$inferSelect): Invoice {
   };
 }
 
-export function buildInvoicesRoutes(db: Db, cache: CacheService): FastifyPluginAsync {
+export function buildInvoicesRoutes(db: Db, cache: CacheService, services?: ServiceOverrides): FastifyPluginAsync {
+  const generateChaser = services?.generateChaser ?? defaultGenerateChaser;
+  const sendChaser = services?.sendChaser ?? defaultSendChaser;
   return async (app) => {
 
     // Lazy status update helper

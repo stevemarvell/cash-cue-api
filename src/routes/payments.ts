@@ -3,9 +3,15 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { users, invoices } from '../db/schema.js';
-import { subscribe, cancel, createPaymentLink, constructWebhookEvent } from '../services/payments.js';
+import {
+  subscribe as defaultSubscribe,
+  cancel as defaultCancel,
+  createPaymentLink as defaultCreatePaymentLink,
+  constructWebhookEvent as defaultConstructWebhookEvent,
+} from '../services/payments.js';
 import { invoiceTotalMinor } from '../domain/invoice.js';
 import type { Invoice } from '../types/api.js';
+import type { ServiceOverrides } from './invoices.js';
 
 const subscribeBodySchema = z.object({
   userId: z.string().min(1),
@@ -36,7 +42,11 @@ function rowToInvoice(row: typeof invoices.$inferSelect): Invoice {
   };
 }
 
-export function buildPaymentsRoutes(db: Db): FastifyPluginAsync {
+export function buildPaymentsRoutes(db: Db, services?: ServiceOverrides): FastifyPluginAsync {
+  const subscribe = (services?.subscribe as typeof defaultSubscribe | undefined) ?? defaultSubscribe;
+  const cancel = (services?.cancel as typeof defaultCancel | undefined) ?? defaultCancel;
+  const createPaymentLink = (services?.createPaymentLink as typeof defaultCreatePaymentLink | undefined) ?? defaultCreatePaymentLink;
+  const constructWebhookEvent = (services?.constructWebhookEvent as typeof defaultConstructWebhookEvent | undefined) ?? defaultConstructWebhookEvent;
   return async (app) => {
     app.post('/payments/subscribe', async (request, reply) => {
       const result = subscribeBodySchema.safeParse(request.body);

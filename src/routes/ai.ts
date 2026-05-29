@@ -3,9 +3,10 @@ import { z } from 'zod';
 import { eq, inArray, and } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { invoices, clients, users } from '../db/schema.js';
-import { generateChaser, summariseCashFlow } from '../services/ai.js';
+import { generateChaser as defaultGenerateChaser, summariseCashFlow as defaultSummariseCashFlow } from '../services/ai.js';
 import type { CacheService } from '../cache/cache.js';
 import type { Invoice, ChaserTone } from '../types/api.js';
+import type { ServiceOverrides } from './invoices.js';
 import { createHash } from 'crypto';
 
 const chaserBodySchema = z.object({
@@ -35,7 +36,9 @@ function rowToInvoice(row: typeof invoices.$inferSelect): Invoice {
   };
 }
 
-export function buildAiRoutes(db: Db, cache: CacheService): FastifyPluginAsync {
+export function buildAiRoutes(db: Db, cache: CacheService, services?: ServiceOverrides): FastifyPluginAsync {
+  const generateChaser = services?.generateChaser ?? defaultGenerateChaser;
+  const summariseCashFlow = (services?.summariseCashFlow as typeof defaultSummariseCashFlow | undefined) ?? defaultSummariseCashFlow;
   return async (app) => {
     app.post('/ai/chaser', async (request, reply) => {
       const result = chaserBodySchema.safeParse(request.body);
